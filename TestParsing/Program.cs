@@ -65,10 +65,23 @@ namespace TestParsing
             var time = DateTime.Now;
             try
             {
-                for (int i = 0; i < urls.Length; i++)
+                for (int i = 0, counter = 0; i < urls.Length; i++)
                 {
                     Console.WriteLine(types[i] + " начаты");
-                    ProcessWork(urls[i], types[i]);
+                    try
+                    {
+                        int task_i = i;
+                        ProcessWork(urls[task_i], types[task_i]).Wait();
+                    }
+                    catch (Exception exc)
+                    {
+                        if (counter is 5)
+                            continue;
+                        i--;
+                        counter++;
+                    }
+                    Task.Delay(50).Wait();
+                    
                     Console.WriteLine(types[i] + " закончены");
                 }
             }
@@ -80,7 +93,7 @@ namespace TestParsing
             
         }
 
-        public static async void ProcessWork(String url, string type)
+        public static async Task ProcessWork(String url, string type)
         {
             HttpClientHandler handler = new()
             {
@@ -88,7 +101,7 @@ namespace TestParsing
             };
 
             var client = new HttpClient(handler);
-            client.DefaultRequestHeaders.Add("User-Agent", userAgent_current); 
+            client.DefaultRequestHeaders.Add("User-Agent", userAgent_list[random.Next(userAgent_list.Length)]); 
             
             var response = client.GetAsync(url).Result;
             var html = await response.Content.ReadAsStringAsync();
@@ -98,58 +111,94 @@ namespace TestParsing
 
             int last_page = GetLastPageNum(doc);
 
-            List<FilmInfo> all_films = new();
+            DateTime? time = null;
 
-            for (int i = 1, checker = 0; i <= last_page; i++)
+            for (int i = 1, checker = 0, http_checker = 0; i <= last_page; i++)
             {
-                client.DefaultRequestHeaders.Remove("User-Agent");
-                client.DefaultRequestHeaders.Add("User-Agent", 
-                    userAgent_list[random.Next(userAgent_list.Length)]);
-
-                FilmInfo[] films;
-                if (i is 1)
+                FilmInfo[] films = new FilmInfo[0];
+                try
                 {
+                    time = checker is 0 ? DateTime.Now : time is not null ? time : DateTime.Now;
+
+                    client.DefaultRequestHeaders.Remove("User-Agent");
+                    client.DefaultRequestHeaders.Add("User-Agent",
+                        userAgent_list[random.Next(userAgent_list.Length)]);
+
+                    var current_url = i is 1 ? url : url + $"page/{i}/";
+
+                    if (i is 1)
+                    {
+                        films = await ProcessPage(doc, type);
+
+                        if (films.Length is 0)
+                        {
+                            if (checker is 5)
+                            {
+                                Console.WriteLine($"Страница №{i} пропущена - {current_url}");
+                            }
+                            i--;
+                            checker++;
+                            Task.Delay(2000).Wait();
+                            continue;
+                        }
+
+                        Console.WriteLine($"Страница №{i} закончена - {films.Length} - {(DateTime.Now - time)?.TotalSeconds}");
+
+                        checker = 0;
+                        WriteToDB(sqlite_conn, films);
+                        continue;
+                    }
+
+                    response = client.GetAsync(current_url).Result;
+                    html = await response.Content.ReadAsStringAsync();
+
+                    doc = parser.ParseDocument(html);
+
                     films = await ProcessPage(doc, type);
 
-                    Console.WriteLine($"Страница №{i} закончена - {films.Length}");
-                    continue;
-                }
-
-                var current_url = i is 1 ? url : url + $"page/{i}/";
-                
-                response = client.GetAsync(current_url).Result;
-                html = await response.Content.ReadAsStringAsync();
-
-                doc = parser.ParseDocument(html);
-
-                films = await ProcessPage(doc, type);
-
-                Console.WriteLine($"Страница №{i} закончена - {films.Length}");
-
-                if (films.Length is 0)
-                {
-                    if (checker is 5)
+                    if (films.Length is 0)
                     {
-                        Console.WriteLine($"Страница №{i} пропущена - {current_url}");
+                        if (checker is 5)
+                        {
+                            checker = 0;
+                            Console.WriteLine($"Страница №{i} пропущена - {current_url}");
+                            continue;
+                        }
+                        i--;
+                        checker++;
+                        Task.Delay(2000).Wait();
+                        continue;
+                    }
+
+                    Console.WriteLine($"Страница №{i} закончена - {films.Length} - {(DateTime.Now - time)?.TotalSeconds}");
+
+                    checker = 0;
+                }
+                catch (Exception exc)
+                {
+                    if (http_checker is 5)
+                    {
+                        http_checker = 0;
+                        continue;
                     }
                     i--;
-                    checker++;
-                    Task.Delay(2000).Wait();
-                    continue;
+                    http_checker++;
                 }
-
-                checker = 0;
-                all_films.AddRange(films);
+                http_checker = 0;
+                
                 WriteToDB(sqlite_conn, films);
             }
         }
 
         static int GetLastPageNum(AngleSharp.Html.Dom.IHtmlDocument doc)
         {
-            var pages = doc.GetElementsByClassName("b-navigation")[0].GetElementsByTagName("A");
-            var last_page = pages[pages.Length - 2];
+            var pages = doc.GetElementsByClassName("b-navigation");
+            var vs1 = pages[0];
+            var vs2 = vs1.GetElementsByTagName("A");
+            var last_page = vs2[vs2.Length - 2];
             return int.Parse(last_page.TextContent);
         }
+
         static async Task<FilmInfo[]> ProcessPage(AngleSharp.Html.Dom.IHtmlDocument doc, string type)
         {
             List<FilmInfo> list = new();
@@ -157,51 +206,167 @@ namespace TestParsing
             //Ищу все ссылки на фильмы на странице
             var divs = doc.GetElementsByClassName("b-content__inline_item-link");
 
-            foreach (var div in divs)
+            var tasks = new Task<FilmInfo>[divs.Length];
+            for (int i = 0; i < divs.Length; i++)
             {
-                list.Add(ProcessFilmPage(div, type));
+                int i_to_task = i;
+                tasks[i] = Task<FilmInfo>.Run(() =>
+                {
+                    return ProcessFilmPage(divs[i_to_task], type);
+                });
             }
-
-            //Оказалось быстрее в одном потоке
-
-            //var tasks = new Task<FilmInfo>[divs.Length];
-            //for (int i = 0; i < divs.Length; i++)
-            //{
-            //    int i_to_task = i;
-            //    tasks[i] = Task<FilmInfo>.Run(() =>
-            //    {
-            //        return ProcessFilmPage(divs[i_to_task]);
-            //    });
-            //}
-            //Task.WaitAny(tasks);
-            //foreach (var task in tasks)
-            //{
-            //    list.Add(task.Result);
-            //}
-
+            Task.WaitAny(tasks);
+            for (int i = 0; i < tasks.Length; i++)
+            {
+                Task.WaitAll(tasks[i]);
+                list.Add(tasks[i].Result);
+            }
 
             return list.ToArray();
         }
+
         static FilmInfo ProcessFilmPage(AngleSharp.Dom.IElement div, string type)
         {
             var date_country_data = div.Children[1].TextContent.Trim().Split(',');
 
             var title = div.Children[0].TextContent.Trim();
             var link = div.Children[0].GetAttribute("href");
-            var release_date = DateTime.Parse("01.01." + date_country_data[0].Split('-')[0].Trim());
             var country = date_country_data[1].Trim();
+
+            var inf = GetFilmInfo(link);
 
             return new FilmInfo()
             {
                 Title = title,
                 Link = link,
-                ReleaseDate = release_date,
+                ReleaseDate = inf?.releaseDate,
                 Country = country,
-                Type = type
+                Type = type,
+                Genres = inf?.genres,
+                Producer = inf?.producer,
+            };
+        }
+
+        struct Information
+        {
+            public string releaseDate;
+            public string producer;
+            public string genres;
+
+            public Information(string releaseDate, string producer, string genres)
+            {
+                this.releaseDate = releaseDate;
+                this.producer = producer;
+                this.genres = genres;
+            }
+        }
+
+        static Information? GetFilmInfo(string url)
+        {
+            HttpClientHandler handler = new()
+            {
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
             };
 
-            //Позже для фул инфы
-            //var user_agent = userAgent_list[random.Next(userAgent_list.Length)];
+            var client = new HttpClient(handler);
+            string html = string.Empty;
+
+            bool isContinue = true;
+            for (int i = 0; isContinue; i++)
+            {
+                client.DefaultRequestHeaders.Add("User-Agent",
+                    userAgent_list[random.Next(userAgent_list.Length)]);
+
+                var response = client.GetAsync(url).Result;
+                if (response.IsSuccessStatusCode)
+                {
+                    isContinue = false;
+                }
+                else
+                {
+                    if (i is 10)
+                        return null;
+                    continue;
+                }
+                html = response.Content.ReadAsStringAsync().Result;
+            }
+
+            var parser = new HtmlParser();
+            var doc = parser.ParseDocument(html);
+
+            //table info
+            var trs = doc.GetElementsByClassName("b-post__info")[0].GetElementsByTagName("tr");
+
+            Dictionary<string, AngleSharp.Dom.IElement> dict = new();
+
+            for (int i = 0; i < trs.Length; i++)
+            {
+                try
+                {
+                    var res = IsInfo(trs[i].GetElementsByTagName("h2")[0].TextContent);
+                    if (res is 1)
+                    {
+                        dict.Add("date", trs[i]);
+                    }
+                    else if (res is 2)
+                    {
+                        dict.Add("producer", trs[i]);
+                    }
+                    else if (res is 3)
+                    {
+                        dict.Add("genres", trs[i]);
+                    }
+                }
+                catch (Exception exc)
+                {
+
+                }
+            }
+            string release, producer, genres;
+            release = producer = genres = string.Empty;
+            try
+            {
+                release = dict["date"].GetElementsByTagName("td")[1].TextContent.Split(" год")[0];
+            }
+            catch (Exception exc)
+            {
+
+            }
+            try
+            {
+                producer = dict["producer"].GetElementsByTagName("a")[0].FirstChild.TextContent;
+            }
+            catch (Exception exc)
+            {
+
+            }
+            try
+            {
+                genres = String.Join(", ", from cur in dict["genres"].GetElementsByTagName("span") select cur.TextContent);
+            }
+            catch (Exception exc)
+            {
+
+            }
+
+            return new Information(releaseDate: release, producer: producer, genres: genres);
+        }
+
+        static int IsInfo(string text)
+        {
+            if (text.StartsWith("Дата"))
+            {
+                return 1;
+            }
+            if (text.StartsWith("Режиссер"))
+            {
+                return 2;
+            }
+            if (text.StartsWith("Жанр"))
+            {
+                return 3;
+            }
+            return -1;
         }
 
 
@@ -216,18 +381,23 @@ namespace TestParsing
 
                 foreach (var film in films)
                 {
-                    var date = film.ReleaseDate?.ToString("dd-MM-yyyy");
                     try
                     {
-                        sqlite_cmd.CommandText = "INSERT INTO Films (Title, Release, Country, Link, Type)" +
-                            $" VALUES('{film.Title}', '{date}', '{film.Country}', '{film.Link}', '{film.Type}');";
+                        sqlite_cmd.CommandText = 
+                            @$"INSERT INTO Films (Title, Release, Country, Link, Type, Producer, Genres) 
+                            VALUES ('{film.Title}', '{film.ReleaseDate}', '{film.Country}', '{film.Link}',
+                            '{film.Type}', '{film.Producer}', '{film.Genres}');";
                         sqlite_cmd.ExecuteNonQuery();
                     }
                     catch
                     {
                         var normal_title = film.Title.Replace("\"", "&quot").Replace("\'", "&apos;");
-                        sqlite_cmd.CommandText = "INSERT INTO Films (Title, Release, Country, Link, Type)" +
-                            $" VALUES('{normal_title}', '{date}', '{film.Country}', '{film.Link}', '{film.Type}');";
+                        var normal_country = film.Country?.Replace("\"", "&quot").Replace("\'", "&apos;");
+                        var normal_producer = film.Producer?.Replace("\"", "&quot").Replace("\'", "&apos;");
+                        sqlite_cmd.CommandText =
+                            @$"INSERT INTO Films (Title, Release, Country, Link, Type, Producer, Genres) 
+                            VALUES ('{normal_title}', '{film.ReleaseDate}', '{(normal_country is null ? "null" : normal_country)}', '{film.Link}',
+                            '{film.Type}', '{(normal_producer is null ? "null" : normal_producer)}', '{film.Genres}');";
                         sqlite_cmd.ExecuteNonQuery();
                     }
                 }
@@ -243,11 +413,6 @@ namespace TestParsing
         }
         static SQLiteConnection CreateDB()
         {
-            if (File.Exists("database.db"))
-            {
-                File.Delete("database.db");
-            }
-
             SQLiteConnection sql = new("Data Source=database.db; Version = 3; New = True; Compress = True; Synchronous=Off");
             CreateTable(sql);
             return sql;
@@ -258,10 +423,28 @@ namespace TestParsing
             {
                 conn.Open();
                 SQLiteCommand sqlite_cmd;
-                string Createsql = "CREATE TABLE Films (Title TEXT, Release TEXT, Country TEXT, Link TEXT, Type TEXT)";
+                string checkExistence = "SELECT title FROM FILMS LIMIT 1";
+                string Createsql =
+                    @$"CREATE TABLE Films (
+                        Title TEXT, 
+                        Release TEXT, 
+                        Country TEXT, 
+                        Link TEXT, 
+                        Type TEXT,
+                        Producer TEXT,
+                        Genres TEXT
+                    )";
                 sqlite_cmd = conn.CreateCommand();
-                sqlite_cmd.CommandText = Createsql;
-                sqlite_cmd.ExecuteNonQuery();
+                sqlite_cmd.CommandText = checkExistence;
+                try
+                {
+                    sqlite_cmd.ExecuteScalar();
+                }
+                catch (Exception)
+                {
+                    sqlite_cmd.CommandText = Createsql;
+                    sqlite_cmd.ExecuteNonQuery();
+                }
             }
             catch (Exception exc)
             {

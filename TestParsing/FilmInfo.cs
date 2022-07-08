@@ -3,13 +3,12 @@
     internal class FilmInfo
     {
         string title;
-        DateTime? releaseDate;
+        string? releaseDate;
         string? country;
-        //string? producer;
-        //string? translation;
-        //string? genres;
+        string? producer;
+        string? genres;
         string link;
-        string type;
+        string? type;
         
 
         #region Properties
@@ -26,7 +25,7 @@
             }
         }
 
-        public DateTime? ReleaseDate
+        public string? ReleaseDate
         {
             get
             {
@@ -37,7 +36,7 @@
                 releaseDate = value;
             }
         }
-        public string Country
+        public string? Country
         {
             get
             {
@@ -48,39 +47,28 @@
                 country = value;
             }
         }
-        //public string Producer
-        //{
-        //    get
-        //    {
-        //        return producer;
-        //    }
-        //    set
-        //    {
-        //        producer = value;
-        //    }
-        //}
-        //public string Translation
-        //{
-        //    get
-        //    {
-        //        return translation;
-        //    }
-        //    set
-        //    {
-        //        translation = value;
-        //    }
-        //}
-        //public string Genres
-        //{
-        //    get
-        //    {
-        //        return genres;
-        //    }
-        //    set
-        //    {
-        //        genres = value;
-        //    }
-        //}
+        public string? Producer
+        {
+            get
+            {
+                return producer;
+            }
+            set
+            {
+                producer = value;
+            }
+        }
+        public string? Genres
+        {
+            get
+            {
+                return genres;
+            }
+            set
+            {
+                genres = value;
+            }
+        }
         public string Link
         {
             get
@@ -92,7 +80,7 @@
                 link = value;
             }
         }
-        public string Type
+        public string? Type
         {
             get
             {
