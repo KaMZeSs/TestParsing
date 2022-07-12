@@ -4,16 +4,16 @@
 winexe
 C#
 .cs
-C:\Repos\TestParsing\Client\obj\Debug\net6.0-windows\
+E:\Repos\TestParsing\Client\obj\Debug\net6.0-windows\
 Client
 none
 false
 TRACE;DEBUG;NET;NET6_0;NETCOREAPP
-C:\Repos\TestParsing\Client\App.xaml
+E:\Repos\TestParsing\Client\App.xaml
 11407045341
 
 51149945088
-199624931163
+199-1541903980
 MainWindow.xaml;
 
 False

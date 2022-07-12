@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "DfsOgR/Jfuz8ikh+nomMVDrRSfLLVKXqm/r6EVHPgee6/IqQRrmI3v7k32CZPVBjX8uHyxHG9wYPa6XYL2CeLg==",
+  "dgSpecHash": "q6TYAQtDUcsGqDvYQEPo4KSOFpePMJgK5aax+PdGiMs25CzbL+pTOhMe+NJ5aIxGc72ci3dzXJl7NiQWDX22Sw==",
   "success": true,
-  "projectFilePath": "C:\\Repos\\TestParsing\\TestParsing\\TestParsing.csproj",
+  "projectFilePath": "E:\\Repos\\TestParsing\\TestParsing\\TestParsing.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\vladd\\.nuget\\packages\\anglesharp\\0.17.1\\anglesharp.0.17.1.nupkg.sha512",
     "C:\\Users\\vladd\\.nuget\\packages\\entityframework\\6.4.4\\entityframework.6.4.4.nupkg.sha512",

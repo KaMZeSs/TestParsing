@@ -5,8 +5,18 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Client"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="MainWindow" Height="450" Width="800"
+        Loaded="Window_Loaded">
     <Grid>
-
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40"></RowDefinition>
+            <RowDefinition></RowDefinition>
+        </Grid.RowDefinitions>
+        <Menu Grid.Row="0">
+            <MenuItem Header="Файл" Height="40">
+                <MenuItem Header="Обновить" Click="MenuItem_Click"></MenuItem>
+            </MenuItem>
+        </Menu>
+        <DataGrid Grid.Row="1" Name="ViewTable" AutoGenerateColumns="True"></DataGrid>
     </Grid>
 </Window>

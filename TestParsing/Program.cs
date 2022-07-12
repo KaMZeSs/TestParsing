@@ -113,7 +113,7 @@ namespace TestParsing
 
             DateTime? time = null;
 
-            for (int i = 1, checker = 0, http_checker = 0; i <= last_page; i++)
+            for (int i = 0, checker = 0, http_checker = 0; i <= last_page; i++)
             {
                 FilmInfo[] films = new FilmInfo[0];
                 try
@@ -413,7 +413,7 @@ namespace TestParsing
         }
         static SQLiteConnection CreateDB()
         {
-            SQLiteConnection sql = new("Data Source=database.db; Version = 3; New = True; Compress = True; Synchronous=Off");
+            SQLiteConnection sql = new("Data Source=database.db; Version = 3; New = True; Synchronous=Off");
             CreateTable(sql);
             return sql;
         }

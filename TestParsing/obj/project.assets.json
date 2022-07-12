@@ -1332,11 +1332,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Repos\\TestParsing\\TestParsing\\TestParsing.csproj",
+      "projectUniqueName": "E:\\Repos\\TestParsing\\TestParsing\\TestParsing.csproj",
       "projectName": "TestParsing",
-      "projectPath": "C:\\Repos\\TestParsing\\TestParsing\\TestParsing.csproj",
+      "projectPath": "E:\\Repos\\TestParsing\\TestParsing\\TestParsing.csproj",
       "packagesPath": "C:\\Users\\vladd\\.nuget\\packages\\",
-      "outputPath": "C:\\Repos\\TestParsing\\TestParsing\\obj\\",
+      "outputPath": "E:\\Repos\\TestParsing\\TestParsing\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -1393,7 +1393,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.301\\RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.300\\RuntimeIdentifierGraph.json"
       }
     }
   }

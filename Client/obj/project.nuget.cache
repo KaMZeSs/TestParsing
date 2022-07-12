@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "SngIYcgcUh1l2GdcHYTPz9/6uXt1agB1nbRrKtTdGi+qDrccWWep9qPCnYQTDQ1sC6tvoCE4up7TRdITSs0y7w==",
+  "dgSpecHash": "zwLOrnsEX4RI/Ctf9hoIOA38dNMFqGnLhkjlvWPmekQUVMjOU5yiKoq/MvDlx04/hiKu/HUcfOR5OPB9f54L/Q==",
   "success": true,
-  "projectFilePath": "C:\\Repos\\TestParsing\\Client\\Client.csproj",
+  "projectFilePath": "E:\\Repos\\TestParsing\\Client\\Client.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\vladd\\.nuget\\packages\\entityframework\\6.4.4\\entityframework.6.4.4.nupkg.sha512",
     "C:\\Users\\vladd\\.nuget\\packages\\microsoft.csharp\\4.7.0\\microsoft.csharp.4.7.0.nupkg.sha512",
