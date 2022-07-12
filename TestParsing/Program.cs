@@ -113,7 +113,7 @@ namespace TestParsing
 
             DateTime? time = null;
 
-            for (int i = 0, checker = 0, http_checker = 0; i <= last_page; i++)
+            for (int i = 1, checker = 0, http_checker = 0; i <= last_page; i++)
             {
                 FilmInfo[] films = new FilmInfo[0];
                 try
@@ -263,93 +263,105 @@ namespace TestParsing
 
         static Information? GetFilmInfo(string url)
         {
-            HttpClientHandler handler = new()
+            for (int j = 0; ; j++)
             {
-                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-            };
-
-            var client = new HttpClient(handler);
-            string html = string.Empty;
-
-            bool isContinue = true;
-            for (int i = 0; isContinue; i++)
-            {
-                client.DefaultRequestHeaders.Add("User-Agent",
-                    userAgent_list[random.Next(userAgent_list.Length)]);
-
-                var response = client.GetAsync(url).Result;
-                if (response.IsSuccessStatusCode)
+                HttpClientHandler handler = new()
                 {
-                    isContinue = false;
+                    AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+                };
+
+                var client = new HttpClient(handler);
+                string html = string.Empty;
+
+                bool isContinue = true;
+                for (int i = 0; isContinue; i++)
+                {
+                    client.DefaultRequestHeaders.Add("User-Agent",
+                        userAgent_list[random.Next(userAgent_list.Length)]);
+
+                    var response = client.GetAsync(url).Result;
+                    if (response.IsSuccessStatusCode)
+                    {
+                        isContinue = false;
+                    }
+                    else
+                    {
+                        Task.Delay(200);
+                        if (i is 100)
+                            return null;
+                        continue;
+                    }
+                    html = response.Content.ReadAsStringAsync().Result;
                 }
-                else
+
+                var parser = new HtmlParser();
+                var doc = parser.ParseDocument(html);
+
+                //table info
+                var trs = doc.GetElementsByClassName("b-post__info")[0].GetElementsByTagName("tr");
+
+                Dictionary<string, AngleSharp.Dom.IElement> dict = new();
+
+                if (trs.Length is 0)
                 {
-                    if (i is 10)
+                    Task.Delay(300);
+                    if (j is 10)
                         return null;
                     continue;
                 }
-                html = response.Content.ReadAsStringAsync().Result;
-            }
 
-            var parser = new HtmlParser();
-            var doc = parser.ParseDocument(html);
+                for (int i = 0; i < trs.Length; i++)
+                {
+                    try
+                    {
+                        var res = IsInfo(trs[i].GetElementsByTagName("h2")[0].TextContent);
+                        if (res is 1)
+                        {
+                            dict.Add("date", trs[i]);
+                        }
+                        else if (res is 2)
+                        {
+                            dict.Add("producer", trs[i]);
+                        }
+                        else if (res is 3)
+                        {
+                            dict.Add("genres", trs[i]);
+                        }
+                    }
+                    catch (Exception exc)
+                    {
 
-            //table info
-            var trs = doc.GetElementsByClassName("b-post__info")[0].GetElementsByTagName("tr");
-
-            Dictionary<string, AngleSharp.Dom.IElement> dict = new();
-
-            for (int i = 0; i < trs.Length; i++)
-            {
+                    }
+                }
+                string release, producer, genres;
+                release = producer = genres = string.Empty;
                 try
                 {
-                    var res = IsInfo(trs[i].GetElementsByTagName("h2")[0].TextContent);
-                    if (res is 1)
-                    {
-                        dict.Add("date", trs[i]);
-                    }
-                    else if (res is 2)
-                    {
-                        dict.Add("producer", trs[i]);
-                    }
-                    else if (res is 3)
-                    {
-                        dict.Add("genres", trs[i]);
-                    }
+                    release = dict["date"].GetElementsByTagName("td")[1].TextContent.Split(" год")[0];
                 }
                 catch (Exception exc)
                 {
 
                 }
-            }
-            string release, producer, genres;
-            release = producer = genres = string.Empty;
-            try
-            {
-                release = dict["date"].GetElementsByTagName("td")[1].TextContent.Split(" год")[0];
-            }
-            catch (Exception exc)
-            {
+                try
+                {
+                    producer = dict["producer"].GetElementsByTagName("a")[0].FirstChild.TextContent;
+                }
+                catch (Exception exc)
+                {
 
-            }
-            try
-            {
-                producer = dict["producer"].GetElementsByTagName("a")[0].FirstChild.TextContent;
-            }
-            catch (Exception exc)
-            {
+                }
+                try
+                {
+                    genres = String.Join(", ", from cur in dict["genres"].GetElementsByTagName("span") select cur.TextContent);
+                }
+                catch (Exception exc)
+                {
 
-            }
-            try
-            {
-                genres = String.Join(", ", from cur in dict["genres"].GetElementsByTagName("span") select cur.TextContent);
-            }
-            catch (Exception exc)
-            {
+                }
 
+                return new Information(releaseDate: release, producer: producer, genres: genres);
             }
-
-            return new Information(releaseDate: release, producer: producer, genres: genres);
         }
 
         static int IsInfo(string text)
